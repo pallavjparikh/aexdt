@@ -1,0 +1,57 @@
+on boot
+    # Disable UFS powersaving
+    write /sys/devices/platform/soc/1d84000.ufshc/clkscale_enable 0
+    write /sys/devices/platform/soc/1d84000.ufshc/clkgate_enable 0
+    write /sys/devices/platform/soc/1d84000.ufshc/hibern8_on_idle_enable 0
+    write /sys/module/lpm_levels/parameters/sleep_disabled Y
+
+on property:vendor.post_boot.parsed=1
+    # Disable sched autogroup
+    write /proc/sys/kernel/sched_autogroup_enabled 0
+
+    # Enable UFS powersaving
+    write /sys/devices/platform/soc/1d84000.ufshc/clkscale_enable 1
+    write /sys/devices/platform/soc/1d84000.ufshc/clkgate_enable 1
+    write /sys/devices/platform/soc/1d84000.ufshc/hibern8_on_idle_enable 1
+    write /sys/module/lpm_levels/parameters/sleep_disabled N
+
+    # Disable OOM Reaper
+    write /proc/sys/vm/reap_mem_on_sigkill 0
+    write /sys/module/lowmemorykiller/parameters/oom_reaper 0
+
+    # Enable per-process reclaim
+    write /sys/module/process_reclaim/parameters/enable_process_reclaim 1
+
+    # Setup Writeback
+    write /proc/sys/vm/dirty_ratio 80
+    write /proc/sys/vm/dirty_background_ratio 8
+    write /proc/sys/vm/page-cluster 0
+
+    # Setup final blkio
+    # value for group_idle is us
+    write /dev/blkio/blkio.weight 1000
+    write /dev/blkio/background/blkio.weight 10
+    write /dev/blkio/blkio.group_idle 2000
+    write /dev/blkio/background/blkio.group_idle 0
+
+    # Block layer tuning: discard chunk size up to 128MB
+    # Otherwise, contiguous discards can be merged
+    write /sys/block/sda/queue/discard_max_bytes 134217728
+
+    # Set the default IRQ affinity to the silver cluster.
+    write /proc/irq/default_smp_affinity f
+
+    # Setup runtime cpusets
+    write /dev/cpuset/top-app/cpus 0-7
+    write /dev/cpuset/foreground/cpus 0-3,5-6
+    write /dev/cpuset/background/cpus 0-1
+    write /dev/cpuset/system-background/cpus 0-3
+    write /dev/cpuset/restricted/cpus 0-3
+
+    # Runtime fs tuning
+    write /sys/block/sda/queue/read_ahead_kb 128
+    write /sys/block/sda/queue/nr_requests 128
+    write /sys/block/sda/queue/iostats 1
+    write /sys/block/sde/queue/read_ahead_kb 128
+    write /sys/block/sde/queue/nr_requests 128
+    write /sys/block/sde/queue/iostats 1
